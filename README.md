@@ -1,18 +1,62 @@
 # Project LAGO data model
 
-## Environment Setup with Anaconda
+### 📦 Requisitos
 
-To recreate the environment, run the following command:
+- [Poetry](https://python-poetry.org/docs/#installation)
+- Python 3.12 o superior
 
-```bash
-conda env create -f environment.yml
-```
+---
 
-This will install all dependencies listed in the environment.yml file. Once complete, activate the environment using:
-bash
+### Instalación del entorno
 
 ```bash
-conda activate <environment_name>
+poetry install
 ```
 
-Replace `<environment_name>` with the name specified in the environment.yml file. Deactivate the environment with:
+Para activar el entorno virtual:
+
+```bash
+poetry shell
+```
+
+---
+
+### Ejecutar Jupyter Lab
+Jupyter lab lo podemos utilizar para ejecutar los notebooks.
+
+```bash
+poetry run jupyter lab
+```
+
+Esto abrirá una sesión interactiva en tu navegador.
+
+---
+
+### Procesar un archivo `.lag`
+
+Este proyecto incluye un lector de archivos `.lag` que convierte los datos en un DataFrame y los guarda como archivo `.parquet`.
+
+
+#### Opción 1: Usar Makefile
+
+```bash
+make read-data file=./data/20210518_142318.lag
+```
+
+> Esto ejecutará el lector y guardará el archivo como `output/instrument_readings_YYYYMMDDHHMM.parquet`.
+
+#### Opción 2: Ejecutar el script directamente
+
+```bash
+poetry run python scripts/run_lag_reader.py ./data/20210518_142318.lag
+```
+
+---
+
+### Salida esperada
+
+El archivo generado tendrá este formato:
+
+```
+output/instrument_readings_202503291230.parquet
+```
