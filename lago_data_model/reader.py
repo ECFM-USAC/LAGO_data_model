@@ -1,5 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
+from datetime import datetime
 
 class LagFileReader:
     def __init__(self, file_path: str):
@@ -18,7 +19,9 @@ class LagFileReader:
                     current_tbp = int(line.strip().split(":")[1])
                     current_readings = []
                 else:
-                    current_readings.append(line.strip())
+                    stripped = line.strip()
+                    if stripped:  # avoid empty lines
+                        current_readings.append(float(stripped))
 
             # Add the last section
             if current_tbp is not None:
@@ -33,7 +36,7 @@ class LagFileReader:
 
     def save_as_parquet(self, output_folder: str = ".", prefix: str = "instrument_readings"):
         timestamp = datetime.now().strftime("%Y%m%d%H%M")
-        output_path = f"{output_folder}/{prefix}_{timestamp}.parquet"
+        output_path = f"{output_folder}/{prefix}__{timestamp}.parquet"
 
         df = self.to_dataframe()
         df.to_parquet(output_path, compression='snappy')
