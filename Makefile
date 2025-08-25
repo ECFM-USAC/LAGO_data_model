@@ -24,5 +24,5 @@ docker-run:
 		-e PYTHONPATH=/app \
 		lago-data-model
 
-docker-start: docker-build-fresh docker-run
+docker-start: docker-build docker-run
 	@echo "Container started. Access JupyterLab at http://192.168.30.70:8888"
