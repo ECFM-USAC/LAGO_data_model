@@ -4,8 +4,8 @@ banner:
 install: banner
 	poetry install
 
-notebook:
+notebook: banner
 	poetry run jupyter lab	
 
-read-data:
+read-data: banner
 	bash scripts/run_data_reader.sh $(file)
