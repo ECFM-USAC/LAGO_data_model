@@ -10,10 +10,12 @@ notebook: banner
 read-data: banner
 	bash scripts/run_data_reader.sh $(file)
 
+
+## Docker
 docker-build: banner
 	docker build -t lago-data-model .
 
-docker-run: banner
+docker-run: 
 	docker run -d \
 		--name lago_container \
 		-p 8888:8888 \
@@ -21,3 +23,6 @@ docker-run: banner
 		-v $(shell pwd)/data:/app/data \
 		-e PYTHONPATH=/app \
 		lago-data-model
+
+docker-start: docker-build-fresh docker-run
+	@echo "Container started. Access JupyterLab at http://192.168.30.70:8888"
