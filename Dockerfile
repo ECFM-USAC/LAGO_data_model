@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
 
 # Install dependencies using Poetry
-RUN poetry install
+RUN poetry lock
+RUN poetry install --no-root
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/notebooks /app/scripts

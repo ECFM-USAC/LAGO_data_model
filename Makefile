@@ -13,7 +13,6 @@ read-data: banner
 
 ## Docker
 docker-build: banner
-	poetry lock
 	docker build -t lago-data-model .
 
 docker-run: 
