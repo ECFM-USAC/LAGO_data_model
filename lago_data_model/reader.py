@@ -47,6 +47,7 @@ class LagFileReader:
                     table = pa.table(chunk_data, schema=schema)
                     
                     if writer is None:
+                        # TODO: Do we want to use snappy here? gzip seems like a better fit
                         writer = pq.ParquetWriter(output_path, schema, compression='snappy')
                     
                     writer.write_table(table)
