@@ -1,13 +1,14 @@
-import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from tqdm import tqdm
 from datetime import datetime
 
 class LagFileReader:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path, chunk_size=1000):
         self.file_path = file_path
-        self.data = []
+        self.chunk_size = chunk_size
 
-    def parse(self):
+    def _parse_stream(self):
         current_tbp = None
         current_readings = []
 
@@ -15,29 +16,52 @@ class LagFileReader:
             for line in tqdm(file, desc="Processing file"):
                 if line.startswith("TBP:"):
                     if current_tbp is not None:
-                        self.data.append({'TBP': current_tbp, 'readings': current_readings})
+                        yield {'TBP': current_tbp, 'readings': current_readings}
                     current_tbp = int(line.strip().split(":")[1])
                     current_readings = []
                 else:
                     stripped = line.strip()
-                    if stripped:  # avoid empty lines
+                    if stripped:
                         current_readings.append(float(stripped))
 
-            # Add the last section
             if current_tbp is not None:
-                self.data.append({'TBP': current_tbp, 'readings': current_readings})
+                yield {'TBP': current_tbp, 'readings': current_readings}
 
-        return self.data
-
-    def to_dataframe(self):
-        if not self.data:
-            self.parse()
-        return pd.DataFrame(self.data)
-
-    def save_as_parquet(self, output_folder: str = ".", prefix: str = "instrument_readings"):
+    def save_as_parquet_streaming(self, output_folder=".", prefix="instrument_readings"):
         timestamp = datetime.now().strftime("%Y%m%d%H%M")
         output_path = f"{output_folder}/{prefix}__{timestamp}.parquet"
-
-        df = self.to_dataframe()
-        df.to_parquet(output_path, compression='snappy')
+        
+        schema = pa.schema([
+            ('TBP', pa.int64()),
+            ('readings', pa.list_(pa.float64()))
+        ])
+        
+        writer = None
+        chunk_data = []
+        
+        try:
+            for record in self._parse_stream():
+                chunk_data.append(record)
+                
+                if len(chunk_data) >= self.chunk_size:
+                    table = pa.table(chunk_data, schema=schema)
+                    
+                    if writer is None:
+                        # TODO: Do we want to use snappy here? gzip seems like a better fit
+                        writer = pq.ParquetWriter(output_path, schema, compression='snappy')
+                    
+                    writer.write_table(table)
+                    chunk_data = []
+            
+            # Write remaining data
+            if chunk_data:
+                table = pa.table(chunk_data, schema=schema)
+                if writer is None:
+                    writer = pq.ParquetWriter(output_path, schema, compression='snappy')
+                writer.write_table(table)
+                
+        finally:
+            if writer:
+                writer.close()
+        
         return output_path
