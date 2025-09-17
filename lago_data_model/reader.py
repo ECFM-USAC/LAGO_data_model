@@ -5,7 +5,7 @@ from tqdm import tqdm
 from datetime import datetime
 
 class LagFileReader:
-    def __init__(self, file_path, chunk_size=1000):
+    def __init__(self, file_path, chunk_size=5000):
         self.file_path = file_path
         self.chunk_size = chunk_size
 
