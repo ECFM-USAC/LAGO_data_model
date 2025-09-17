@@ -1,3 +1,4 @@
+import os
 import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm import tqdm
@@ -28,6 +29,8 @@ class LagFileReader:
                 yield {'TBP': current_tbp, 'readings': current_readings}
 
     def save_as_parquet_streaming(self, output_folder=".", prefix="instrument_readings"):
+        # Create the output dir if it doesn't exist
+        os.makedirs(output_folder, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d%H%M")
         output_path = f"{output_folder}/{prefix}__{timestamp}.parquet"
         
