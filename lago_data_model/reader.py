@@ -37,25 +37,28 @@ class LagFileReader:
         ])
         
         writer = None
-        chunk_data = []
+        tbp_values = []
+        readings_values = []
         
         try:
             for record in self._parse_stream():
-                chunk_data.append(record)
+                tbp_values.append(record['TBP'])
+                readings_values.append(record['readings'])
                 
-                if len(chunk_data) >= self.chunk_size:
-                    table = pa.table(chunk_data, schema=schema)
+                if len(tbp_values) >= self.chunk_size:
+                    table = pa.table([tbp_values, readings_values], schema=schema)
                     
                     if writer is None:
                         # TODO: Do we want to use snappy here? gzip seems like a better fit
                         writer = pq.ParquetWriter(output_path, schema, compression='snappy')
                     
                     writer.write_table(table)
-                    chunk_data = []
+                    tbp_values = []
+                    readings_values = []
             
             # Write remaining data
-            if chunk_data:
-                table = pa.table(chunk_data, schema=schema)
+            if tbp_values:
+                table = pa.table([tbp_values, readings_values], schema=schema)
                 if writer is None:
                     writer = pq.ParquetWriter(output_path, schema, compression='snappy')
                 writer.write_table(table)
