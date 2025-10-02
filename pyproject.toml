@@ -2,9 +2,7 @@
 name = "lago-data-model"
 version = "0.0.2"
 description = ""
-authors = [
-    {name = "Erick Diaz",email = "ewdiazsa@gmail.com"}
-]
+authors = [{ name = "Erick Diaz", email = "ewdiazsa@gmail.com" }]
 package-mode = false
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,12 +13,38 @@ dependencies = [
     "jupyterlab>=4.0.0",
     "tqdm (>=4.67.1,<5.0.0)",
     "pyarrow (>=21.0.0,<22.0.0)",
-
     "tornado (>=6.5,<7.0)",
     "requests (>=2.32.4,<3.0.0)",
-    "urllib3 (>=2.5.0,<3.0.0)"
+    "urllib3 (>=2.5.0,<3.0.0)",
+    "scikit-learn>=1.4.0",
+    "xgboost>=2.0.0"
 ]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "lago-data-model"
+version = "0.0.2"
+description = ""
+authors = ["Erick Diaz <ewdiazsa@gmail.com>"]
+package-mode = false
+
+# Fuente oficial de PyTorch con  CUDA 
+[[tool.poetry.source]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "explicit"
+
+# PyPI por defecto
+[[tool.poetry.source]]
+name = "pypi"
+priority = "primary"
+
+# -------- GRUPOS OPCIONALES --------
+# Grupo GPU: solo se instala en la imagen GPU
+[tool.poetry.group.gpu.dependencies]
+torch = { version = ">=2.4.0", source = "pytorch-cu124" }
+torchvision = { version = ">=0.19.0", source = "pytorch-cu124" }
+torchaudio = { version = ">=2.4.0", source = "pytorch-cu124" }

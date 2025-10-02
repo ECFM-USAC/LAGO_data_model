@@ -1,36 +1,47 @@
-# Use Python 3.12 slim image as base
-FROM python:3.12-slim
+# ---------- Parámetros ----------
+# Por defecto: CPU con python slim
+ARG BASE_IMAGE=python:3.12-slim
+ARG INSTALL_GPU_DEPS=0  # 0=CPU, 1=GPU
 
-# Set working directory
+# ---------- Etapa base ----------
+FROM ${BASE_IMAGE} AS base
+
 WORKDIR /app
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV JUPYTER_ENABLE_LAB=yes
+ENV PYTHONPATH=/app \
+    JUPYTER_ENABLE_LAB=yes \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
+# Paquetes de sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pyproject.toml and poetry.lock to leverage Docker cache
+# Copiamos manifests primero (para cache)
 COPY pyproject.toml poetry.lock ./
 
-# Install Poetry
-RUN pip install --no-cache-dir poetry
-
-# Configure Poetry: Don't create virtual env (we're already in container)
+# Poetry
+RUN pip install --no-cache-dir "poetry>=1.8.0"
 RUN poetry config virtualenvs.create false
 
-# Install dependencies using Poetry
-RUN poetry lock
-RUN poetry install --no-root
+# Instalación condicional:
+# - CPU: sin grupo gpu
+# - GPU: con grupo gpu (torch/vision/audio desde índice CUDA)
+RUN if [ "$INSTALL_GPU_DEPS" = "1" ]; then \
+      echo "Instalando CON grupo gpu..." && \
+      poetry lock && poetry install --with gpu --no-root --no-interaction --no-ansi ; \
+    else \
+      echo "Instalando SIN grupo gpu..." && \
+      poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi ; \
+    fi
 
-# Create necessary directories
+# Estructura de trabajo
 RUN mkdir -p /app/data /app/notebooks /app/scripts
 
-# Expose JupyterLab port
+# Exponer Jupyter
 EXPOSE 8888
 
-# Set default command to start JupyterLab
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''", "--NotebookApp.password=''"]
+# Comando por defecto
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password="]

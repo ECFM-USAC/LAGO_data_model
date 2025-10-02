@@ -1,14 +1,13 @@
 # Project LAGO data model
 
-### 📦 Requisitos
+## 📦 Requisitos (entorno local)
 
-- [Poetry](https://python-poetry.org/docs/#installation)
-- Python 3.12 o superior
+- [Poetry](https://python-poetry.org/docs/#installation)  
+- Python 3.11 o superior  
 
 ---
 
-### Instalación del entorno
-
+### 🚀 Instalación del entorno (local)
 ```bash
 poetry install
 ```
@@ -31,6 +30,56 @@ poetry run jupyter lab
 Esto abrirá una sesión interactiva en tu navegador.
 
 ---
+
+
+## 🐳 Uso con Docker
+
+Puedes levantar el entorno completo dentro de un contenedor Docker. Existen dos variantes:
+
+- CPU: entorno ligero, sin soporte para GPU.
+
+- GPU: entorno con PyTorch CUDA y posibilidad de usar torch.cuda (requiere drivers NVIDIA y nvidia-container-toolkit en el host).
+
+### Construir imagen
+
+CPU:
+```bash
+make docker-build
+```
+
+GPU:
+```bash
+make docker-build-gpu
+```
+
+### Ejecutar contenedor
+
+CPU (corre en http://localhost:8888):
+```bash
+
+make docker-run
+```
+
+GPU (corre en http://localhost:8888):
+```bash
+
+make docker-run-gpu
+```
+
+Validación de GPU
+
+Dentro de un notebook, ejecuta:
+```python
+import torch
+print("CUDA disponible:", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("GPU:", torch.cuda.get_device_name(0))
+```
+
+Si aparece tu tarjeta NVIDIA, el contenedor está usando la GPU correctamente.
+
+
+
 
 ### Procesar un archivo `.lag`
 
