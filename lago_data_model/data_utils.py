@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from tqdm import tqdm
 
 def extract_pulses(
     y: np.ndarray,
@@ -107,3 +107,68 @@ def extract_pulses(
     
     return pd.DataFrame(feats)
 
+
+def extract_pulses_and_segments(
+    y: np.ndarray,
+    nsigma_threshold: float = 3.0,
+    crossback_nsigma: float = 1.0,
+    min_len: int = 3,
+    baseline_win: int = 25
+):
+    """
+    Returns
+    -------
+    df : pd.DataFrame
+        Mismas columnas que extract_pulses (1 fila por pulso).
+    segments : list[dict]
+        Lista con elementos {'start','end','min_idx','values'} por pulso.
+    """
+    df = extract_pulses(
+        y=y,
+        nsigma_threshold=nsigma_threshold,
+        crossback_nsigma=crossback_nsigma,
+        min_len=min_len,
+        baseline_win=baseline_win
+    )
+
+    # 2) Construir los segmentos con los índices ya calculados
+    segments = []
+    if not df.empty:
+        y = np.asarray(y).astype(float)
+        for _, r in df.iterrows():
+            i0, i1 = int(r.start_idx), int(r.end_idx)
+            seg = y[i0:i1+1].copy()
+            segments.append({
+                "start": i0,
+                "end": i1,
+                "min_idx": int(r.min_idx),
+                "values": seg
+            })
+    return df, segments
+
+
+def process_dataframe_readings(
+    data: pd.DataFrame,
+    readings_col: str = "readings",
+    **extract_kwargs
+):
+    """
+    Aplica extract_pulses_and_segments a cada fila.
+    Devuelve:
+      - pulses_df: todas las features (1 fila por pulso) con 'row_id'
+      - segments: lista de segmentos con 'row_id'
+    """
+    all_feats = []
+    all_segments = []
+    for idx, row in tqdm(data.iterrows(), total=len(data), desc="Pulsos por fila"):
+        y = row[readings_col]
+        df, segs = extract_pulses_and_segments(y, **extract_kwargs)
+        if not df.empty:
+            df.insert(0, "row_id", idx)
+            all_feats.append(df)
+            for s in segs:
+                s["row_id"] = idx
+            all_segments.extend(segs)
+
+    pulses_df = pd.concat(all_feats, ignore_index=True) if all_feats else pd.DataFrame()
+    return pulses_df, all_segments
