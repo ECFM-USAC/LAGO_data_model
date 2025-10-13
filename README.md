@@ -32,7 +32,7 @@ Esto abrirá una sesión interactiva en tu navegador.
 ---
 
 
-## 🐳 Uso con Docker
+## Uso con Docker
 
 Puedes levantar el entorno completo dentro de un contenedor Docker. Existen dos variantes:
 
