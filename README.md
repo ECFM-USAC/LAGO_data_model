@@ -18,7 +18,6 @@ Para activar el entorno virtual:
 poetry shell
 ```
 
----
 
 ### Ejecutar Jupyter Lab
 Jupyter lab lo podemos utilizar para ejecutar los notebooks.
@@ -34,7 +33,7 @@ Esto abrirá una sesión interactiva en tu navegador.
 
 ## 🐳 Uso con Docker
 
-Puedes levantar el entorno completo dentro de un contenedor Docker. Existen dos variantes:
+Puedes ejecutar el entorno completo dentro de un contenedor Docker. Existen dos variantes:
 
 - CPU: entorno ligero, sin soporte para GPU.
 
@@ -65,6 +64,8 @@ GPU (corre en http://localhost:8888):
 
 make docker-run-gpu
 ```
+Una vez ejecutado el comando puedes entrar al navegador y acceder a jupyter lab
+
 
 Validación de GPU
 
@@ -79,7 +80,7 @@ if torch.cuda.is_available():
 Si aparece tu tarjeta NVIDIA, el contenedor está usando la GPU correctamente.
 
 
-
+---
 
 ### Procesar un archivo `.lag`
 
