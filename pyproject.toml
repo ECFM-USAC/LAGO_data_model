@@ -18,9 +18,6 @@ dependencies = [
     "urllib3 (>=2.5.0,<3.0.0)",
     "scikit-learn>=1.4.0",
     "xgboost>=2.0.0", 
-    "tensorflow[and-cuda]==2.17.*",
-    "nvidia-cuda-nvcc-cu12>=12.4",
-    "hls4ml>=0.8.0",
 ]
 
 [build-system]
@@ -43,3 +40,9 @@ priority = "primary"
 torch = { version = ">=2.4.0", source = "pytorch-cu124" }
 torchvision = { version = ">=0.19.0", source = "pytorch-cu124" }
 torchaudio = { version = ">=2.4.0", source = "pytorch-cu124" }
+
+[tool.poetry.group.tf-cpu.dependencies]
+tensorflow = ">=2.17,<2.18"
+
+[tool.poetry.group.tf-gpu.dependencies]
+tensorflow = { version = ">=2.17,<2.18", extras = ["and-cuda"] }

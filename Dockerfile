@@ -1,5 +1,4 @@
 # ---------- Parámetros ----------
-# Por defecto: CPU con python slim
 ARG BASE_IMAGE=python:3.12-slim
 ARG INSTALL_GPU_DEPS=0  # 0=CPU, 1=GPU
 
