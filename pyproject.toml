@@ -18,20 +18,14 @@ dependencies = [
     "urllib3 (>=2.5.0,<3.0.0)",
     "scikit-learn>=1.4.0",
     "xgboost>=2.0.0", 
-    "tensorflow>=2.17",
+    "tensorflow[and-cuda]==2.17.*",
+    "nvidia-cuda-nvcc-cu12>=12.4",
     "hls4ml>=0.8.0",
 ]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "lago-data-model"
-version = "0.0.2"
-description = ""
-authors = ["Erick Diaz <ewdiazsa@gmail.com>"]
-package-mode = false
 
 # Fuente oficial de PyTorch con  CUDA 
 [[tool.poetry.source]]
