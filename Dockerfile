@@ -20,27 +20,23 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir "poetry>=1.8.0"
 RUN poetry config virtualenvs.create false
 
-# --- Instalación condicional (TF tiene prioridad) ---
-# - Si INSTALL_TF_DEPS=1 y además quieres GPU, pasa TF_FLAVOR=tf-gpu (ver Makefile).
-# - Si INSTALL_TF_DEPS=1 y CPU, instalamos tf-cpu.
-# - Si INSTALL_TF_DEPS=0 y INSTALL_GPU_DEPS=1 -> PyTorch (gpu).
-# - Si ambos 0 -> base CPU sin frameworks.
-ARG TF_FLAVOR=tf-cpu  # tf-cpu | tf-gpu
 
+# Instalación condicional de dependencias:
+# - CPU: deps base sin grupo gpu
+# - GPU-PyTorch: deps base + grupo gpu
+# - TF-GPU: deps base (sin torch) + hls4ml (no instalamos tensorflow: ya viene en la imagen TF)
 RUN if [ "$INSTALL_TF_DEPS" = "1" ]; then \
-      if [ "$TF_FLAVOR" = "tf-gpu" ]; then \
-        echo "Instalando TensorFlow GPU..." && \
-        poetry install --with tf-gpu --no-root --no-interaction --no-ansi ; \
-      else \
-        echo "Instalando TensorFlow CPU..." && \
-        poetry install --with tf-cpu --no-root --no-interaction --no-ansi ; \
-      fi ; \
-    elif [ "$INSTALL_GPU_DEPS" = "1" ]; then \
-      echo "Instalando PyTorch CUDA (sin TensorFlow)..." && \
-      poetry install --with gpu --no-root --no-interaction --no-ansi ; \
+      echo "==> Modo TensorFlow: instalando deps base (SIN torch) + hls4ml" && \
+      poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi && \
+      pip install --no-cache-dir "hls4ml>=0.8.0"; \
     else \
-      echo "Instalando base (sin TF ni Torch)..." && \
-      poetry install --no-root --no-interaction --no-ansi ; \
+      if [ "$INSTALL_GPU_DEPS" = "1" ]; then \
+        echo "==> Modo PyTorch GPU: instalando deps base + grupo [gpu]" && \
+        poetry lock && poetry install --with gpu --no-root --no-interaction --no-ansi; \
+      else \
+        echo "==> Modo CPU: instalando deps base (SIN grupo gpu)" && \
+        poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi; \
+      fi; \
     fi
 
 RUN mkdir -p /app/data /app/notebooks /app/scripts
