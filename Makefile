@@ -53,7 +53,7 @@ docker-start-gpu: docker-build-gpu docker-run-gpu
 ## TensorFlow GPU
 docker-build-tf-gpu: banner
 	docker build \
-		--build-arg BASE_IMAGE=tensorflow/tensorflow:2.17.1-gpu \
+		--build-arg BASE_IMAGE=tensorflow/tensorflow:2.17.0rc1-gpu \
 		--build-arg INSTALL_TF_DEPS=1 \
 		--build-arg INSTALL_GPU_DEPS=0 \
 		-t lago-data-model-tf:gpu .
@@ -70,7 +70,3 @@ docker-run-tf-gpu:
 
 docker-start-tf-gpu: docker-build-tf-gpu docker-run-tf-gpu
 	@echo "TensorFlow GPU container started. http://localhost:8888"
-
-
-docker-rm-tf-gpu:
-\t- docker rm -f lago_container_tf_gpu 2>/dev/null || true
