@@ -26,17 +26,14 @@ RUN poetry config virtualenvs.create false
 # - GPU-PyTorch: deps base + grupo gpu
 # - TF-GPU: deps base (sin torch) + hls4ml (no instalamos tensorflow: ya viene en la imagen TF)
 RUN if [ "$INSTALL_TF_DEPS" = "1" ]; then \
-      echo "==> Modo TensorFlow: instalando deps base (SIN torch) + hls4ml" && \
-      poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi && \
-      pip install --no-cache-dir "hls4ml>=0.8.0"; \
+      echo "==> Modo TensorFlow: deps base + grupo [tf]" && \
+      poetry lock && poetry install --with tf --without gpu --no-root --no-interaction --no-ansi; \
+    elif [ "$INSTALL_GPU_DEPS" = "1" ]; then \
+      echo "==> Modo PyTorch GPU: deps base + grupo [gpu]" && \
+      poetry lock && poetry install --with gpu --no-root --no-interaction --no-ansi; \
     else \
-      if [ "$INSTALL_GPU_DEPS" = "1" ]; then \
-        echo "==> Modo PyTorch GPU: instalando deps base + grupo [gpu]" && \
-        poetry lock && poetry install --with gpu --no-root --no-interaction --no-ansi; \
-      else \
-        echo "==> Modo CPU: instalando deps base (SIN grupo gpu)" && \
-        poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi; \
-      fi; \
+      echo "==> Modo CPU: deps base (SIN grupos extra)" && \
+      poetry lock && poetry install --without gpu --no-root --no-interaction --no-ansi; \
     fi
 
 RUN mkdir -p /app/data /app/notebooks /app/scripts
