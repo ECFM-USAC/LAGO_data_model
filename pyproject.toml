@@ -40,11 +40,3 @@ priority = "primary"
 torch = { version = ">=2.4.0", source = "pytorch-cu124" }
 torchvision = { version = ">=0.19.0", source = "pytorch-cu124" }
 torchaudio = { version = ">=2.4.0", source = "pytorch-cu124" }
-
-# Tensorflow CPU
-[tool.poetry.group.tf-cpu.dependencies]
-tensorflow = ">=2.17,<2.18"
-
-# Tensorflow GPU
-[tool.poetry.group.tf-gpu.dependencies]
-tensorflow = { version = ">=2.17,<2.18", extras = ["and-cuda"] }

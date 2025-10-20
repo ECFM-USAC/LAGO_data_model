@@ -76,7 +76,7 @@ docker-start-tf: docker-build-tf docker-run-tf
 ## TensorFlow GPU
 docker-build-tf-gpu: banner
 	docker build \
-		--build-arg BASE_IMAGE=python:3.12-slim \
+		--build-arg BASE_IMAGE=tensorflow/tensorflow:2.17.1-gpu \
 		--build-arg INSTALL_TF_DEPS=1 \
 		--build-arg TF_FLAVOR=tf-gpu \
 		--build-arg INSTALL_GPU_DEPS=0 \
