@@ -1,5 +1,4 @@
 import os
-import torch
 from datetime import datetime
 from xgboost import XGBModel
 import joblib
@@ -20,35 +19,21 @@ from sklearn.metrics import (
     accuracy_score
 )
 
-class EarlyStopping:
-    def __init__(self, patience=5, delta=0, model_name=None):
-        self.patience = patience
-        self.delta = delta
-        self.best_score = None
-        self.early_stop = False
-        self.counter = 0
-        self.model_name = model_name
 
-    def __call__(self, val_loss, model):
-        score = -val_loss
+def _optional_torch():
+    try:
+        import importlib
+        return importlib.import_module("torch")
+    except Exception:
+        return None
 
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-            self.counter = 0
-
-    def save_checkpoint(self, val_loss, model):
-        '''Save model when validation loss decrease.'''
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        torch.save(model.state_dict(), f"checkpoint_timestamp.pt")
-
+def _optional_tf():
+    try:
+        import importlib
+        return importlib.import_module("tensorflow")
+    except Exception:
+        return None
+        
 def eval_predictions(
     y_true,
     y_pred,
@@ -415,98 +400,206 @@ def compare_models(
 
 def save_model(model, path: str, model_type: str = "auto", add_timestamp: bool = True):
     """
-    Saves a model (PyTorch, XGBoost, or sklearn) and automatically adds a timestamp to the filename.
-
-    Parameters
-    ----------
-    model : object
-        The model object to save (PyTorch nn.Module, XGBoost, sklearn, etc.)
-    path : str
-        Base path for saving (e.g. 'models/mlp_best.pt')
-    model_type : str
-        'torch', 'xgb', 'sklearn', or 'auto' (auto-detects)
-    add_timestamp : bool
-        If True, appends a timestamp (e.g. '_2025-10-07_15-42-31') before the extension.
+    Guarda modelo (PyTorch, XGBoost, sklearn, Keras o TensorFlow puro) con timestamp opcional.
+    - Torch / TF / Keras se importan de forma perezosa.
+    - Keras: .keras / .h5 (archivo) o carpeta (SavedModel/Export).
+    - TF puro: siempre carpeta (SavedModel).
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    import os
+    from datetime import datetime
+    from xgboost import XGBModel
+    import joblib
 
-    # --- add timestamp ---
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+
+    # Timestamp
     if add_timestamp:
         base, ext = os.path.splitext(path)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        path = f"{base}_{timestamp}{ext}"
+        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # Si es carpeta (sin extensión) también timestamp
+        if ext:
+            path = f"{base}_{ts}{ext}"
+        else:
+            path = f"{path}_{ts}"
 
-    # --- detect type automatically ---
+    # --- auto detección sin forzar imports globales ---
     if model_type == "auto":
-        if isinstance(model, torch.nn.Module):
+        # Torch (duck-typing + módulo)
+        module_name = getattr(model.__class__, "__module__", "")
+        is_torch_like = hasattr(model, "state_dict") and ("torch" in module_name)
+        if is_torch_like:
             model_type = "torch"
         elif isinstance(model, XGBModel):
             model_type = "xgb"
         else:
-            model_type = "sklearn"
+            tf = _optional_tf()
+            if tf is not None:
+                # Keras primero (keras.Model) – sin romper si es TF puro
+                try:
+                    if isinstance(model, tf.keras.Model):
+                        model_type = "keras"
+                    else:
+                        # TF puro: objetos con .variables / .trainable_variables
+                        if hasattr(model, "variables") or hasattr(model, "trainable_variables"):
+                            model_type = "tf"
+                        else:
+                            model_type = "sklearn"
+                except Exception:
+                    model_type = "sklearn"
+            else:
+                model_type = "sklearn"
 
-    # --- save model by type ---
+    # --- guardar por tipo ---
     if model_type == "torch":
+        torch = _optional_torch()
+        if torch is None:
+            raise RuntimeError("Intentas guardar un modelo PyTorch pero torch no está instalado.")
         torch.save(model.state_dict(), path)
-        print(f"PyTorch model saved at: {path}")
+        print(f"[save_model] PyTorch guardado en: {path}")
+        return path
 
-    elif model_type == "xgb":
+    if model_type == "xgb":
+        # Si termina en .pkl, usamos joblib; si no, XGB nativo (.json/.ubj)
         if path.endswith(".pkl"):
             joblib.dump(model, path)
         else:
             model.save_model(path)
-        print(f"XGBoost model saved at: {path}")
+        print(f"[save_model] XGBoost guardado en: {path}")
+        return path
 
-    elif model_type == "sklearn":
+    if model_type == "sklearn":
         joblib.dump(model, path)
-        print(f"Scikit-learn model saved at: {path}")
+        print(f"[save_model] sklearn guardado en: {path}")
+        return path
 
-    else:
-        raise ValueError(f"Unrecognized model_type: {model_type}")
+    if model_type == "keras":
+        tf = _optional_tf()
+        if tf is None:
+            raise RuntimeError("Intentas guardar un modelo Keras pero TensorFlow no está instalado.")
 
-    return path
+        # Keras 3 (TF 2.15+): 
+        # - Archivo recomendado: .keras
+        # - H5 sigue siendo válido (.h5)
+        # - Export (SavedModel) vía model.export() si existe; si no, model.save(dir)
+        base, ext = os.path.splitext(path)
+        if ext.lower() in (".keras", ".h5"):
+            # Archivo único
+            model.save(path)
+        else:
+            # Carpeta: preferir export() si está disponible (Keras 3),
+            # de lo contrario guardar SavedModel con save()
+            if hasattr(model, "export"):
+                # Exporta SavedModel para serving
+                model.export(path)
+            else:
+                # Keras <3: guardará SavedModel en carpeta
+                model.save(path)
+        print(f"[save_model] Keras guardado en: {path}")
+        return path
+
+    if model_type == "tf":
+        tf = _optional_tf()
+        if tf is None:
+            raise RuntimeError("Intentas guardar un objeto TensorFlow pero TensorFlow no está instalado.")
+        # TF puro: usar siempre carpeta (SavedModel). Si vino con extensión, la ignoramos y usamos dir.
+        base, ext = os.path.splitext(path)
+        export_dir = base if ext else path
+        os.makedirs(export_dir, exist_ok=True)
+        tf.saved_model.save(model, export_dir)
+        print(f"[save_model] TensorFlow (SavedModel) guardado en dir: {export_dir}")
+        return export_dir
+
+    raise ValueError(f"Unrecognized model_type: {model_type}")
 
 
 
 def load_model(path: str, model_class=None, model_type: str = "auto", **kwargs):
     """
-    Carga un modelo guardado según su tipo.
-    Para PyTorch, debes pasar model_class (la arquitectura a instanciar).
+    Carga un modelo según tipo.
+    - torch: requiere model_class para recrear arquitectura; usa state_dict.
+    - xgb: .json/.ubj/.pkl.
+    - sklearn: .pkl.
+    - keras: .keras/.h5 o carpeta SavedModel (Keras 3: también export).
+    - tf: carpeta SavedModel (devuelve un trackable con signatures si existen).
     """
+    import os
+    import joblib
+
+    # Inferencia por extensión / estructura
     if model_type == "auto":
-        if path.endswith(".pt") or path.endswith(".pth"):
+        if path.endswith((".pt", ".pth")):
             model_type = "torch"
-        elif path.endswith(".json"):
+        elif path.endswith(".json") or path.endswith(".ubj"):
             model_type = "xgb"
         elif path.endswith(".pkl"):
+            # Puede ser sklearn o xgb serializado. Asumimos sklearn aquí.
             model_type = "sklearn"
+        elif path.endswith(".keras") or path.endswith(".h5"):
+            model_type = "keras"
         else:
-            raise ValueError("No se pudo inferir el tipo de modelo por extensión.")
+            # Si es carpeta con SavedModel
+            if os.path.isdir(path) and os.path.exists(os.path.join(path, "saved_model.pb")):
+                # Keras export o TF puro
+                # Preferimos intentar Keras primero (si compila), luego TF puro
+                model_type = "keras"  # probaremos keras y si falla, caemos a tf
+            else:
+                raise ValueError("No se pudo inferir el tipo de modelo por extensión/estructura.")
 
     if model_type == "torch":
+        torch = _optional_torch()
+        if torch is None:
+            raise RuntimeError("Intentas cargar un modelo PyTorch pero torch no está instalado.")
         if model_class is None:
             raise ValueError("Para PyTorch, debes pasar model_class (la arquitectura).")
         model = model_class(**kwargs)
         state = torch.load(path, map_location="cpu")
         model.load_state_dict(state)
         model.eval()
-        print(f"Modelo PyTorch cargado desde: {path}")
+        print(f"[load_model] PyTorch cargado desde: {path}")
         return model
 
-    elif model_type == "xgb":
+    if model_type == "xgb":
         if path.endswith(".pkl"):
             model = joblib.load(path)
         else:
             from xgboost import XGBClassifier
             model = XGBClassifier()
             model.load_model(path)
-        print(f"Modelo XGBoost cargado desde: {path}")
+        print(f"[load_model] XGBoost cargado desde: {path}")
         return model
 
-    elif model_type == "sklearn":
+    if model_type == "sklearn":
         model = joblib.load(path)
-        print(f"Modelo sklearn cargado desde: {path}")
+        print(f"[load_model] sklearn cargado desde: {path}")
         return model
 
-    else:
-        raise ValueError(f"Tipo de modelo no reconocido: {model_type}")
+    if model_type == "keras":
+        tf = _optional_tf()
+        if tf is None:
+            raise RuntimeError("Intentas cargar un modelo Keras pero TensorFlow no está instalado.")
+        try:
+            # Keras 3: puede cargar .keras/.h5 y SavedModel (carpeta)
+            # Por defecto, no compilar (puedes pasar compile=True vía kwargs si quieres).
+            compile_arg = kwargs.pop("compile", False)
+            model = tf.keras.models.load_model(path, compile=compile_arg)
+            print(f"[load_model] Keras cargado desde: {path}")
+            return model
+        except Exception as e:
+            # Si falla (p. ej., SavedModel no-Keras), probamos TF puro
+            if os.path.isdir(path) and os.path.exists(os.path.join(path, "saved_model.pb")):
+                print(f"[load_model] No se pudo cargar como Keras ({e}). Probando TF SavedModel...")
+                tf = _optional_tf()
+                loaded = tf.saved_model.load(path)
+                print(f"[load_model] TensorFlow (SavedModel) cargado desde: {path}")
+                return loaded
+            raise
+
+    if model_type == "tf":
+        tf = _optional_tf()
+        if tf is None:
+            raise RuntimeError("Intentas cargar un SavedModel de TensorFlow pero TensorFlow no está instalado.")
+        loaded = tf.saved_model.load(path)
+        print(f"[load_model] TensorFlow (SavedModel) cargado desde: {path}")
+        return loaded
+
+    raise ValueError(f"Tipo de modelo no reconocido: {model_type}")
