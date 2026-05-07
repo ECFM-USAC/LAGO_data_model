@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Virtual envs
+venv/
+.venv/
+
+# Datos generados (parquets, lag, tar.xz)
+data/*.parquet
+data/*.lag
+data/*.tar.xz
+
+# Artefactos de entrenamiento / tuning
+notebooks/logs/
+notebooks/kt_search/
+notebooks/models/
+notebooks/*.pkl
+notebooks/*.csv
+
+# Sistema operativo / IDE
+.DS_Store
+.vscode/
+.idea/
