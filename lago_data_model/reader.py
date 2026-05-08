@@ -44,7 +44,7 @@ class LagFileReader:
                 chunk_data.append(record)
                 
                 if len(chunk_data) >= self.chunk_size:
-                    table = pa.table(chunk_data, schema=schema)
+                    table = pa.Table.from_pylist(chunk_data, schema=schema)
                     
                     if writer is None:
                         # TODO: Do we want to use snappy here? gzip seems like a better fit
@@ -55,7 +55,7 @@ class LagFileReader:
             
             # Write remaining data
             if chunk_data:
-                table = pa.table(chunk_data, schema=schema)
+                table = pa.Table.from_pylist(chunk_data, schema=schema)
                 if writer is None:
                     writer = pq.ParquetWriter(output_path, schema, compression='snappy')
                 writer.write_table(table)
