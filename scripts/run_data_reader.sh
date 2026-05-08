@@ -13,4 +13,4 @@ if [ -z "$PATH_ARG" ]; then
 fi
 
 echo "Target: $PATH_ARG"
-poetry run python scripts/run_data_reader.py "$PATH_ARG"
+python scripts/run_data_reader.py "$PATH_ARG"
