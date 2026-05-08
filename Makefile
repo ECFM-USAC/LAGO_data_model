@@ -17,13 +17,15 @@ docker-build: banner
 		--build-arg INSTALL_GPU_DEPS=0 \
 		-t lago-data-model:cpu .
 
-docker-run: 
+docker-run:
 	docker run -d \
 		--name lago_container_cpu \
+		--user $(shell id -u):$(shell id -g) \
 		-p 8888:8888 \
 		-v $(shell pwd):/app \
 		-v $(shell pwd)/data:/app/data \
 		-e PYTHONPATH=/app \
+		-e HOME=/tmp \
 		lago-data-model:cpu
 
 docker-start: docker-build docker-run
@@ -40,11 +42,13 @@ docker-build-gpu: banner
 docker-run-gpu:
 	docker run -d \
 		--name lago_container_gpu \
+		--user $(shell id -u):$(shell id -g) \
 		--gpus all \
 		-p 8889:8888 \
 		-v $(shell pwd):/app \
 		-v $(shell pwd)/data:/app/data \
 		-e PYTHONPATH=/app \
+		-e HOME=/tmp \
 		lago-data-model:gpu
 
 docker-start-gpu: docker-build-gpu docker-run-gpu
@@ -61,11 +65,13 @@ docker-build-tf-gpu: banner
 docker-run-tf-gpu:
 	docker run -d \
 		--name lago_container_tf_gpu \
+		--user $(shell id -u):$(shell id -g) \
 		--gpus all \
 		-p 8888:8888 \
 		-v $(shell pwd):/app \
 		-v $(shell pwd)/data:/app/data \
 		-e PYTHONPATH=/app \
+		-e HOME=/tmp \
 		lago-data-model-tf:gpu
 
 docker-start-tf-gpu: docker-build-tf-gpu docker-run-tf-gpu
