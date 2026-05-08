@@ -8,7 +8,14 @@ notebook: banner
 	poetry run jupyter lab	
 
 read-data: banner
-	bash scripts/run_data_reader.sh $(file)
+	@if [ -z "$(path)" ] && [ -z "$(file)" ]; then \
+		echo "Uso:"; \
+		echo "  make read-data path=data/                       # procesa todos los .lag del dir"; \
+		echo "  make read-data path=data/20210518_142318.lag    # procesa un archivo"; \
+		echo "  make read-data file=...                          # alias retro-compatible"; \
+		exit 1; \
+	fi
+	bash scripts/run_data_reader.sh "$(or $(path),$(file))"
 
 ## Docker (CPU por defecto)
 docker-build: banner

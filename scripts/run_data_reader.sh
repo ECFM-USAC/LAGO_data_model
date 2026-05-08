@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# Usage: ./scripts/read_lag.sh path/to/file.lag
+# Uso:
+#   ./scripts/run_data_reader.sh path/to/file.lag
+#   ./scripts/run_data_reader.sh path/to/dir/
 
-FILE_PATH="$1"
+PATH_ARG="$1"
 
-if [ -z "$FILE_PATH" ]; then
-    echo "Please provide a .lag file path."
-    echo "Usage: ./scripts/read_lag.sh path/to/file.lag"
+if [ -z "$PATH_ARG" ]; then
+    echo "Por favor pasa un archivo .lag o un directorio."
+    echo "Uso: ./scripts/run_data_reader.sh <archivo.lag | directorio>"
     exit 1
 fi
 
-echo "Processing: $FILE_PATH"
-poetry run python scripts/run_data_reader.py "$FILE_PATH"
+echo "Target: $PATH_ARG"
+poetry run python scripts/run_data_reader.py "$PATH_ARG"
