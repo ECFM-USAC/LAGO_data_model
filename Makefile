@@ -14,7 +14,6 @@ read-data: banner
 docker-build: banner
 	docker build \
 		--build-arg BASE_IMAGE=python:3.12-slim \
-		--build-arg INSTALL_GPU_DEPS=0 \
 		-t lago-data-model:cpu .
 
 docker-run:
@@ -31,35 +30,11 @@ docker-run:
 docker-start: docker-build docker-run
 	@echo "CPU container started. Access JupyterLab at http://localhost:8888"
 
-## PyTorch GPU
-docker-build-gpu: banner
-	docker build \
-		--build-arg BASE_IMAGE=python:3.12-slim \
-		--build-arg INSTALL_TF_DEPS=0 \
-		--build-arg INSTALL_GPU_DEPS=1 \
-		-t lago-data-model:gpu .
-
-docker-run-gpu:
-	docker run -d \
-		--name lago_container_gpu \
-		--user $(shell id -u):$(shell id -g) \
-		--gpus all \
-		-p 8889:8888 \
-		-v $(shell pwd):/app \
-		-v $(shell pwd)/data:/app/data \
-		-e PYTHONPATH=/app \
-		-e HOME=/tmp \
-		lago-data-model:gpu
-
-docker-start-gpu: docker-build-gpu docker-run-gpu
-	@echo "GPU (PyTorch) container started. http://localhost:8888"
-
 ## TensorFlow GPU
 docker-build-tf-gpu: banner
 	docker build \
 		--build-arg BASE_IMAGE=tensorflow/tensorflow:2.17.0rc1-gpu \
 		--build-arg INSTALL_TF_DEPS=1 \
-		--build-arg INSTALL_GPU_DEPS=0 \
 		-t lago-data-model-tf:gpu .
 
 docker-run-tf-gpu:
