@@ -2,6 +2,74 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+
+# ===================================================================
+# Helpers para construir matrices de señal (entrada al modelo MLP/CNN).
+# Usados desde MLP_model.ipynb e inference.ipynb.
+# ===================================================================
+
+def cut_around_min(seg, n_before, n_after):
+    """Recorta el segmento alrededor del mínimo: [kmin-n_before, kmin+n_after]."""
+    if len(seg) == 0:
+        return seg
+    kmin = int(np.argmin(seg))
+    a = max(0, kmin - n_before)
+    b = min(len(seg), kmin + n_after + 1)
+    return seg[a:b]
+
+
+def align_and_normalize(seg, normalize=True, scale="robust", eps=1e-9):
+    """Normaliza por segmento: resta mediana y opcionalmente escala (maxabs o robust p5-p95)."""
+    s = seg.astype(float).copy()
+    if normalize:
+        s = s - np.median(s)
+    if scale == "maxabs":
+        m = np.max(np.abs(s))
+        if m > eps:
+            s = s / m
+    elif scale == "robust":
+        p5, p95 = np.percentile(s, [5, 95])
+        rng = p95 - p5
+        if rng > eps:
+            s = (s - p5) / rng
+    return s
+
+
+def resample_to_fixed(seg, out_len):
+    """Interpolación lineal a longitud fija out_len."""
+    L = len(seg)
+    if L == 0:
+        return np.zeros(out_len)
+    if L == out_len:
+        return seg
+    return np.interp(np.linspace(0, 1, out_len), np.linspace(0, 1, L), seg)
+
+
+def signal_to_vector(values, n_before=40, n_after=87, resample_len=128,
+                     normalize=True, scale="robust"):
+    """Aplica el pipeline de pre-procesamiento a UNA señal de pulso."""
+    seg = np.asarray(values).astype(float)
+    seg = cut_around_min(seg, n_before=n_before, n_after=n_after)
+    seg = align_and_normalize(seg, normalize=normalize, scale=scale)
+    seg = resample_to_fixed(seg, out_len=resample_len)
+    return seg.astype(np.float32)
+
+
+def segments_to_matrix(segments, n_before=40, n_after=87, resample_len=128,
+                       normalize=True, scale="robust"):
+    """Convierte una lista de segments (dicts con 'values' o arrays planos) en matriz (N, resample_len)."""
+    X = np.zeros((len(segments), resample_len), dtype=np.float32)
+    for i, s in enumerate(segments):
+        values = s["values"] if isinstance(s, dict) else s
+        X[i] = signal_to_vector(values, n_before=n_before, n_after=n_after,
+                                resample_len=resample_len, normalize=normalize, scale=scale)
+    return X
+
+
+# ===================================================================
+# Extracción de pulsos desde la señal cruda
+# ===================================================================
+
 def extract_pulses(
     y: np.ndarray,
     nsigma_threshold: float = 3.0,
