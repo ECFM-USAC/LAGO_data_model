@@ -431,6 +431,10 @@ def save_model(model, path: str, model_type: str = "auto", add_timestamp: bool =
             model_type = "torch"
         elif isinstance(model, XGBModel):
             model_type = "xgb"
+        elif module_name.startswith("sklearn") or module_name.startswith("imblearn"):
+            # sklearn-like: short-circuit para NO importar TF (evita errores como
+            # 'MessageFactory has no attribute GetPrototype' por incompat. protobuf).
+            model_type = "sklearn"
         else:
             tf = _optional_tf()
             if tf is not None:
