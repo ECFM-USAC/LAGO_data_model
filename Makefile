@@ -50,6 +50,7 @@ docker-run-tf-gpu:
 		--user $(shell id -u):$(shell id -g) \
 		--gpus all \
 		-p 8888:8888 \
+		-p 6006:6006 \
 		-v $(shell pwd):/app \
 		-v $(shell pwd)/data:/app/data \
 		-e PYTHONPATH=/app \
